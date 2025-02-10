@@ -1,0 +1,209 @@
+Observations:
+1.The dataset has 5154 rows and 8 columns.
+2.Key features relevant for Multiple Linear Regression:
+  ->No. of Bedrooms (categorical, needs conversion to numeric).
+  ->No. of Bathrooms (categorical, needs conversion to numeric).
+  ->Total Area (Sq.Ft.) (contains extra text, needs cleaning).
+  ->Price (target variable, contains text like "₹2.45 Crores", needs conversion to numeric).
+3.Some columns, like Title, Location, and Date of Listing, might not be useful for regression.
+
+
+Next Steps:
+
+->Clean and preprocess the data.
+->Convert Price and Total Area (Sq.Ft.) to numeric values.
+->Encode categorical variables.
+->Build and train the Multiple Linear Regression model.
+
+I'll proceed with these steps now.
+
+ 	import pandas as pd
+
+	# Load the dataset
+	file_path = "/mnt/data/Quickr_Properties.csv"
+	df = pd.read_csv(file_path)
+
+	# Display basic info and first few rows
+	df.info(), df.head()
+
+It looks like some values in the "No. of Bedrooms" column contain non-numeric characters (e.g., "4+"). I'll modify the function to handle such cases and retry preprocessing
+      		
+		
+import numpy as np
+
+# Function to extract numeric values from 'No. of Bedrooms' and 'No. of Bathrooms'
+def extract_number(text):
+    return int(text.split()[0]) if isinstance(text, str) else np.nan
+
+# Convert 'No. of Bedrooms' and 'No. of Bathrooms' to numeric values
+df["No. of Bedrooms"] = df["No. of Bedrooms"].apply(extract_number)
+df["No. of Bathrooms"] = df["No. of Bathrooms"].apply(extract_number)
+
+# Function to extract square footage from 'Total Area (Sq.Ft.)'
+def extract_sqft(text):
+    try:
+        return int(text.split()[0].replace(',', ''))  # Extract only the first numeric part
+    except:
+        return np.nan
+
+df["Total Area (Sq.Ft.)"] = df["Total Area (Sq.Ft.)"].apply(extract_sqft)
+
+# Function to convert 'Price' to numeric values (handling Lakhs and Crores)
+def convert_price(price):
+    try:
+        price = price.replace('₹', '').replace(',', '').strip()
+        if 'Crores' in price:
+            return float(price.split()[0]) * 100       # Convert Crores to Lakhs
+        elif 'Lakhs' in price:
+            return float(price.split()[0])
+    except:
+        return np.nan
+
+df["Price (Lakhs)"] = df["Price"].apply(convert_price)
+
+# Drop unnecessary columns
+df_cleaned = df.drop(columns=["Sr. No.", "Title", "Location", "Date of Listing", "Price"])
+
+# Display cleaned dataset
+df_cleaned.head()
+
+
+
+
+The function extract_sqft is missing due to the restart. I'll redefine it and reprocess the dataset
+
+
+
+import re
+
+# Function to extract numeric values safely from 'No. of Bedrooms' and 'No. of Bathrooms'
+def extract_number_safe(text):
+    if isinstance(text, str):
+        match = re.search(r'\d+', text)  # Extract only the first numeric value
+        return int(match.group()) if match else np.nan
+    return np.nan
+
+# Apply the function
+df["No. of Bedrooms"] = df["No. of Bedrooms"].apply(extract_number_safe)
+df["No. of Bathrooms"] = df["No. of Bathrooms"].apply(extract_number_safe)
+
+# Retry cleaning other columns
+df["Total Area (Sq.Ft.)"] = df["Total Area(Sq.Ft.)"].apply(extract_sqft)
+df["Price (Lakhs)"] = df["Price"].apply(convert_price)
+
+# Drop unnecessary columns
+df_cleaned = df.drop(columns=["Sr. No.", "Title", "Location", "Date of Listing", "Price"])
+
+# Display cleaned dataset
+df_cleaned.head()
+
+
+The dataset has been successfully cleaned, with the relevant numeric columns extracted:
+
+->No. of Bedrooms (Converted to integer)
+->No. of Bathrooms (Converted to integer)
+->Total Area (Sq.Ft.) (Extracted and converted to integer)
+->Price (Lakhs) (Target variable, converted to numeric)
+
+Next Steps:
+1.Handle missing values (if any).
+2.Split the dataset into training and testing sets.
+3.Train a Multiple Linear Regression model.
+
+
+
+I'll proceed with these steps now
+
+
+
+# Redefine the function to extract square footage
+def extract_sqft(text):
+    try:
+        return int(text.split()[0].replace(',', ''))  # Extract only the first numeric part
+    except:
+        return np.nan
+
+# Redefine the function to convert 'Price' to numeric values (handling Lakhs and Crores)
+def convert_price(price):
+    try:
+        price = price.replace('₹', '').replace(',', '').strip()
+        if 'Crores' in price:
+            return float(price.split()[0]) * 100  # Convert Crores to Lakhs
+        elif 'Lakhs' in price:
+            return float(price.split()[0])
+    except:
+        return np.nan
+
+# Re-load the dataset
+df = pd.read_csv(file_path)
+
+# Apply transformations
+df["No. of Bedrooms"] = df["No. of Bedrooms"].apply(extract_number_safe)
+df["No. of Bathrooms"] = df["No. of Bathrooms"].apply(extract_number_safe)
+df["Total Area (Sq.Ft.)"] = df["Total Area (Sq.Ft.)"].apply(extract_sqft)
+df["Price (Lakhs)"] = df["Price"].apply(convert_price)
+
+# Drop unnecessary columns
+df_cleaned = df.drop(columns=["Sr. No.", "Title", "Location", "Date of Listing", "Price"])
+
+# Display cleaned dataset
+df_cleaned.head()
+
+
+
+
+Model Results:
+Coefficients:
+
+   ->No. of Bedrooms: -28.42 (negative impact on       price)
+   ->No. of Bathrooms: 0.043 (almost negligible       impact)
+   ->Total Area (Sq.Ft.): 0.173 (positive impact on       price)
+->Intercept: -22.98 (base price when all features are zero)
+->Mean Absolute Error (MAE): 85.02 Lakhs (average absolute error in predictions)
+->Root Mean Squared Error (RMSE): 404.35 Lakhs (higher error indicates model might need improvements)
+
+
+Observations:
+->The negative coefficient for No. of Bedrooms is unusual, suggesting possible data inconsistencies or feature scaling issues.
+
+->Total Area (Sq.Ft.) has the most significant positive impact on property price.
+
+->The model has a high RMSE, indicating that further feature engineering or transformations might be necessary.
+
+
+
+
+
+
+Would you like me to try polynomial regression or add more feature engineering to improve the model? 
+
+
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+# Drop rows with missing values
+df_cleaned = df_cleaned.dropna()
+
+# Define features (X) and target (y)
+X = df_cleaned[["No. of Bedrooms", "No. of Bathrooms", "Total Area (Sq.Ft.)"]]
+y = df_cleaned["Price (Lakhs)"]
+
+# Split the dataset into training (80%) and testing (20%)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train the Multiple Linear Regression model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+mae = mean_absolute_error(y_test, y_pred)
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+
+# Display evaluation results and model coefficients
+model.coef_, model.intercept_, mae, rmse
+​
